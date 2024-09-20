@@ -32,12 +32,7 @@ db.serialize(() => {
         user_name TEXT
     )`);
 
-    // 初始化座位（AP左，AP右，CA）如果表为空
     db.get("SELECT COUNT(*) as count FROM seats", (err, row) => {
-        if (err) {
-            console.error("初始化座位时出错:", err.message);
-            return;
-        }
         if (row.count === 0) {
             const stmt = db.prepare("INSERT INTO seats (name, status, occupiedBy, startTime, isClosed) VALUES (?, 'free', NULL, NULL, 0)");
             stmt.run("AP左");
@@ -72,12 +67,7 @@ app.get('/api/queue', (req, res) => {
 
 // 占用座位或加入队列
 app.post('/api/occupy', (req, res) => {
-    const { user_name, seat_id } = req.body;
-
-    if (!user_name) {
-        res.status(400).json({ error: '缺少用户名' });
-        return;
-    }
+    const { user_name, seat_id } = req.body;  // 现在我们从前端接收座位ID
 
     // 检查用户是否已经占用其他座位
     db.get("SELECT * FROM seats WHERE occupiedBy = ?", [user_name], (err, currentSeat) => {
@@ -91,77 +81,42 @@ app.post('/api/occupy', (req, res) => {
             return;
         }
 
-        if (seat_id) {
-            // 如果指定了座位ID，尝试占用指定座位
-            db.get("SELECT * FROM seats WHERE id = ? AND status = 'free' AND isClosed = 0", [seat_id], (err, seat) => {
-                if (err) {
-                    res.status(500).json({ error: err.message });
-                    return;
-                }
+        // 查找指定的座位是否空闲且未关闭
+        db.get("SELECT * FROM seats WHERE id = ? AND status = 'free' AND isClosed = 0", [seat_id], (err, seat) => {
+            if (err) {
+                res.status(500).json({ error: err.message });
+                return;
+            }
 
-                if (seat) {
-                    const startTime = Date.now();
-                    db.run("UPDATE seats SET status = 'occupied', occupiedBy = ?, startTime = ? WHERE id = ?", [user_name, startTime, seat.id], function(err) {
-                        if (err) {
-                            res.status(500).json({ error: err.message });
-                            return;
-                        }
-                        io.emit('update');  // 发送实时更新
-                        res.json({ success: true, seatName: seat.name });
-                    });
-                } else {
-                    // 指定座位不可用，加入队列
-                    db.run("INSERT INTO queue (user_name) VALUES (?)", [user_name], function(err) {
-                        if (err) {
-                            res.status(500).json({ error: err.message });
-                            return;
-                        }
-                        io.emit('queue_update');  // 发送实时队列更新
-                        res.json({ success: true, queued: true });
-                    });
-                }
-            });
-        } else {
-            // 没有指定座位ID，自动分配空闲座位
-            db.get("SELECT * FROM seats WHERE status = 'free' AND isClosed = 0 LIMIT 1", (err, seat) => {
-                if (err) {
-                    res.status(500).json({ error: err.message });
-                    return;
-                }
-
-                if (seat) {
-                    const startTime = Date.now();
-                    db.run("UPDATE seats SET status = 'occupied', occupiedBy = ?, startTime = ? WHERE id = ?", [user_name, startTime, seat.id], function(err) {
-                        if (err) {
-                            res.status(500).json({ error: err.message });
-                            return;
-                        }
-                        io.emit('update');  // 发送实时更新
-                        res.json({ success: true, seatName: seat.name });
-                    });
-                } else {
-                    // 没有空闲座位，将用户加入队列
-                    db.run("INSERT INTO queue (user_name) VALUES (?)", [user_name], function(err) {
-                        if (err) {
-                            res.status(500).json({ error: err.message });
-                            return;
-                        }
-                        io.emit('queue_update');  // 发送实时队列更新
-                        res.json({ success: true, queued: true });
-                    });
-                }
-            });
-        }
-    }); // <-- 这里添加了缺失的闭合括号和分号
+            if (seat) {
+                // 占用指定的空闲座位
+                const startTime = Date.now();
+                db.run("UPDATE seats SET status = 'occupied', occupiedBy = ?, startTime = ? WHERE id = ?", [user_name, startTime, seat.id], function(err) {
+                    if (err) {
+                        res.status(500).json({ error: err.message });
+                        return;
+                    }
+                    io.emit('update');  // 发送实时更新
+                    res.json({ success: true, seatName: seat.name });
+                });
+            } else {
+                // 没有空闲的指定座位，将用户加入队列
+                db.run("INSERT INTO queue (user_name) VALUES (?)", [user_name], function(err) {
+                    if (err) {
+                        res.status(500).json({ error: err.message });
+                        return;
+                    }
+                    io.emit('queue_update');  // 发送实时队列更新
+                    res.json({ success: true, queued: true });
+                });
+            }
+        });
+    });
+});
 
 // 释放座位
 app.post('/api/release', (req, res) => {
     const { user_name } = req.body;
-
-    if (!user_name) {
-        res.status(400).json({ error: '缺少用户名' });
-        return;
-    }
 
     db.get("SELECT * FROM seats WHERE occupiedBy = ?", [user_name], (err, seat) => {
         if (err) {
@@ -218,42 +173,19 @@ app.post('/api/release', (req, res) => {
 app.post('/api/join-queue', (req, res) => {
     const { user_name } = req.body;
 
-    if (!user_name) {
-        res.status(400).json({ error: '缺少用户名' });
-        return;
-    }
-
-    // 检查用户是否已经在队列中
-    db.get("SELECT * FROM queue WHERE user_name = ?", [user_name], (err, row) => {
+    db.run("INSERT INTO queue (user_name) VALUES (?)", function(err) {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
         }
-
-        if (row) {
-            res.status(400).json({ error: '您已在队列中' });
-            return;
-        }
-
-        db.run("INSERT INTO queue (user_name) VALUES (?)", [user_name], function(err) {
-            if (err) {
-                res.status(500).json({ error: err.message });
-                return;
-            }
-            io.emit('queue_update');  // 实时更新队列
-            res.json({ success: true });
-        });
+        io.emit('queue_update');  // 实时更新队列
+        res.json({ success: true });
     });
 });
 
 // 取消排队
 app.post('/api/cancel', (req, res) => {
     const { user_name } = req.body;
-
-    if (!user_name) {
-        res.status(400).json({ error: '缺少用户名' });
-        return;
-    }
 
     db.run("DELETE FROM queue WHERE user_name = ?", [user_name], function(err) {
         if (err) {
@@ -269,22 +201,17 @@ app.post('/api/cancel', (req, res) => {
 app.post('/api/close-seat', (req, res) => {
     const { seat_id, user_name } = req.body;
 
-    if (!user_name) {
-        res.status(400).json({ error: '缺少用户名' });
-        return;
-    }
-
     if (user_name !== 'Hadrian') {
         res.status(403).json({ error: '只有管理员可以关闭座位' });
         return;
     }
 
-    db.run("UPDATE seats SET isClosed = 1, status = 'free', occupiedBy = NULL, startTime = NULL WHERE id = ?", [seat_id], function(err) {
+    db.run("UPDATE seats SET isClosed = 1, status = 'free' WHERE id = ?", [seat_id], function(err) {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
         }
-        io.emit('update');  // 发送实时更新
+        io.emit('update');  // 实时更新
         res.json({ success: true });
     });
 });
@@ -292,11 +219,6 @@ app.post('/api/close-seat', (req, res) => {
 // 打开座位（仅限管理员）
 app.post('/api/open-seat', (req, res) => {
     const { seat_id, user_name } = req.body;
-
-    if (!user_name) {
-        res.status(400).json({ error: '缺少用户名' });
-        return;
-    }
 
     if (user_name !== 'Hadrian') {
         res.status(403).json({ error: '只有管理员可以打开座位' });
@@ -308,17 +230,8 @@ app.post('/api/open-seat', (req, res) => {
             res.status(500).json({ error: err.message });
             return;
         }
-        io.emit('update');  // 发送实时更新
+        io.emit('update');  // 实时更新
         res.json({ success: true });
-    });
-});
-
-// 监听Socket连接
-io.on('connection', (socket) => {
-    console.log('用户连接');
-
-    socket.on('disconnect', () => {
-        console.log('用户断开连接');
     });
 });
 
