@@ -240,7 +240,7 @@ app.post('/api/join-queue', (req, res) => {
                 res.status(500).json({ error: err.message });
                 return;
             }
-            io.emit('queue_update');  // 实时更新队列
+            io.emit('queue_update');  // 发送实时队列更新
             res.json({ success: true });
         });
     });
@@ -284,7 +284,7 @@ app.post('/api/close-seat', (req, res) => {
             res.status(500).json({ error: err.message });
             return;
         }
-        io.emit('update');  // 实时更新
+        io.emit('update');  // 发送更新
         res.json({ success: true });
     });
 });
@@ -308,12 +308,12 @@ app.post('/api/open-seat', (req, res) => {
             res.status(500).json({ error: err.message });
             return;
         }
-        io.emit('update');  // 实时更新
+        io.emit('update');  // 发送更新
         res.json({ success: true });
     });
 });
 
-// 监听Socket连接
+// Socket.io连接
 io.on('connection', (socket) => {
     console.log('用户连接');
 
