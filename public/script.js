@@ -66,7 +66,7 @@ function renderSeats(seats) {
             seatDiv.appendChild(occupiedByText);
 
             // 计时器显示占用时长
-            const startTime = new Date(seat.startTime);
+            const startTime = seat.startTime;
             const timeDisplay = document.createElement('p');
             updateTimer(timeDisplay, startTime);  // 初始化显示
             setInterval(() => updateTimer(timeDisplay, startTime), 1000);  // 每秒更新
@@ -107,8 +107,14 @@ function renderSeats(seats) {
 
 // 更新计时器
 function updateTimer(element, startTime) {
-    const now = new Date();
-    const elapsed = now - startTime;
+    const now = Date.now();  // 获取当前时间的时间戳
+    const elapsed = now - startTime;  // 计算时间差
+
+    if (elapsed < 0) {
+        element.innerText = "计时出错，请刷新页面。";
+        return;
+    }
+
     const seconds = Math.floor((elapsed / 1000) % 60);
     const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
     const hours = Math.floor(elapsed / (1000 * 60 * 60));
