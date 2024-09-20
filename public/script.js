@@ -153,24 +153,17 @@ function renderSeats(seats) {
 
         seatsDiv.appendChild(seatDiv);
 
-        // 调试输出，查看每个座位的状态
-        console.log(`座位: ${seat.name}, 状态: ${seat.status}, 是否关闭: ${seat.isClosed}`);
-
         // 如果有任何座位是空闲状态（free），则不应该显示排队按钮
         if (seat.status === 'free') {
-            allOccupiedOrClosed = false;  // 只要有空闲座位，排队按钮就不显示
+            allOccupiedOrClosed = false;
         }
     });
-
-    console.log("所有座位是否被占用或关闭: ", allOccupiedOrClosed);  // 调试信息
 
     // 如果所有座位都被占用或关闭，显示排队按钮
     if (allOccupiedOrClosed) {
         const queueButton = document.createElement('button');
         queueButton.innerText = '加入排队';
-        queueButton.addEventListener('click', () => {
-            joinQueue();  // 加入队列逻辑
-        });
+        queueButton.addEventListener('click', joinQueue);  // 调用joinQueue函数
         seatsDiv.appendChild(queueButton);
     }
 }
@@ -265,6 +258,27 @@ function releaseSeat() {
     })
     .catch(error => {
         console.error('释放座位时出错:', error);
+    });
+}
+
+// 加入排队函数
+function joinQueue() {
+    fetch('/api/join-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_name: userName })  // 发送用户名给后端
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('已加入队列');
+            loadQueue();  // 更新队列信息
+        } else {
+            alert('加入队列失败：' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('加入队列时出错:', error);
     });
 }
 
