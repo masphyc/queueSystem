@@ -33,6 +33,15 @@ document.getElementById('enter').addEventListener('click', () => {
     loadQueue();
 });
 
+// 退出当前用户名并清除 localStorage
+document.getElementById('logoutButton').addEventListener('click', () => {
+    localStorage.removeItem('username');  // 移除用户名
+    userName = '';
+    isAdmin = false;
+    document.getElementById('main').style.display = 'none';
+    document.getElementById('login').style.display = 'block';  // 显示登录界面
+});
+
 // 连接Socket.io
 const socket = io();
 
@@ -90,14 +99,18 @@ function renderSeats(seats) {
             occupiedByText.innerText = `当前占用者: ${seat.occupiedBy}`;
             seatDiv.appendChild(occupiedByText);
 
-            // 延迟几百毫秒，确保 startTime 已经更新到页面
-            setTimeout(() => {
-                const startTime = seat.startTime;  // 从后端传来的时间戳
-                const timeDisplay = document.createElement('p');
+            const startTime = seat.startTime;
+            const timeDisplay = document.createElement('p');
+
+            // 检查 startTime 是否有效，如果无效则显示 0
+            if (!startTime || isNaN(startTime)) {
+                timeDisplay.innerText = "占用时长: 0小时 0分钟 0秒";
+            } else {
                 updateTimer(timeDisplay, startTime);  // 初始化显示
                 setInterval(() => updateTimer(timeDisplay, startTime), 1000);  // 每秒更新
-                seatDiv.appendChild(timeDisplay);
-            }, 300);
+            }
+
+            seatDiv.appendChild(timeDisplay);
         }
 
         // 如果是管理员，提供关闭按钮
