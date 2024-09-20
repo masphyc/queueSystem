@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const { Pool } = require('pg');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 // 初始化Express
@@ -11,89 +11,81 @@ const io = socketIo(server);
 
 // 设定静态文件目录
 app.use(express.static(path.join(__dirname, 'public')));
-
-// 解析JSON请求
 app.use(express.json());
 
-// 初始化PostgreSQL连接池
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
+// 初始化SQLite数据库
+const db = new sqlite3.Database('./queue.db');
 
 // 创建表格（如果不存在）
-const createTables = async () => {
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS seats (
-                id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL,
-                status TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS queue (
-                id SERIAL PRIMARY KEY,
-                seat_id INTEGER REFERENCES seats(id),
-                user_name TEXT NOT NULL
-            );
-        `);
-        console.log('数据库表格已创建');
+db.serialize(() => {
+    db.run(`CREATE TABLE IF NOT EXISTS seats (
+        id INTEGER PRIMARY KEY,
+        name TEXT,
+        status TEXT
+    )`);
 
-        // 初始化座位（AP左，AP右，CA）如果表为空
-        const res = await pool.query("SELECT COUNT(*) FROM seats");
-        if (parseInt(res.rows[0].count) === 0) {
-            await pool.query(`
-                INSERT INTO seats (name, status) VALUES
-                ('AP左', 'free'),
-                ('AP右', 'free'),
-                ('CA', 'free')
-            `);
-            console.log('座位已初始化');
+    db.run(`CREATE TABLE IF NOT EXISTS queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        seat_id INTEGER,
+        user_name TEXT
+    )`);
+
+    // 初始化座位（AP左，AP右，CA）如果表为空
+    db.get("SELECT COUNT(*) as count FROM seats", (err, row) => {
+        if (row.count === 0) {
+            const stmt = db.prepare("INSERT INTO seats (name, status) VALUES (?, ?)");
+            stmt.run("AP左", "free");
+            stmt.run("AP右", "free");
+            stmt.run("CA", "free");
+            stmt.finalize();
         }
-    } catch (err) {
-        console.error('数据库初始化错误:', err);
-    }
-};
-
-// 调用创建表格函数
-createTables();
-
-// API 路由
-
-// 获取所有座位
-app.get('/api/seats', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM seats');
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    });
 });
 
-// 占用座位
-app.post('/api/occupy', async (req, res) => {
+// 获取所有座位
+app.get('/api/seats', (req, res) => {
+    db.all("SELECT * FROM seats", (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows);
+    });
+});
+
+// 占用座位或加入队列
+app.post('/api/occupy', (req, res) => {
     const { seat_id, user_name } = req.body;
-    try {
-        const seat = await pool.query('SELECT status FROM seats WHERE id = $1', [seat_id]);
-        if (seat.rows.length === 0) {
-            return res.status(404).json({ error: '座位不存在' });
+
+    // 检查座位是否空闲
+    db.get("SELECT status FROM seats WHERE id = ?", [seat_id], (err, row) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
         }
 
-        if (seat.rows[0].status === 'free') {
+        if (row.status === 'free') {
             // 占用座位
-            await pool.query('UPDATE seats SET status = $1, name = $2 WHERE id = $3', ['occupied', user_name, seat_id]);
-            io.emit('update');
-            res.json({ success: true });
+            db.run("UPDATE seats SET status = ?, name = ? WHERE id = ?", ['occupied', user_name, seat_id], function(err) {
+                if (err) {
+                    res.status(500).json({ error: err.message });
+                    return;
+                }
+                io.emit('update');  // 发送实时更新
+                res.json({ success: true });
+            });
         } else {
-            // 座位被占用，加入队列
-            await pool.query('INSERT INTO queue (seat_id, user_name) VALUES ($1, $2)', [seat_id, user_name]);
-            io.emit('update');
-            res.json({ success: true, queued: true });
+            // 座位已被占用，加入队列
+            db.run("INSERT INTO queue (seat_id, user_name) VALUES (?, ?)", [seat_id, user_name], function(err) {
+                if (err) {
+                    res.status(500).json({ error: err.message });
+                    return;
+                }
+                io.emit('update');  // 发送实时更新
+                res.json({ success: true, queued: true });
+            });
         }
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    });
 });
 
 // 监听端口
