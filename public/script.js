@@ -156,9 +156,9 @@ function renderSeats(seats) {
         // 调试输出，查看每个座位的状态
         console.log(`座位: ${seat.name}, 状态: ${seat.status}, 是否关闭: ${seat.isClosed}`);
 
-        // 如果有空闲座位或者有未关闭的座位，则不显示排队按钮
-        if (seat.status === 'free' || !seat.isClosed) {
-            allOccupiedOrClosed = false;
+        // 如果有任何座位是空闲状态（free），则不应该显示排队按钮
+        if (seat.status === 'free') {
+            allOccupiedOrClosed = false;  // 只要有空闲座位，排队按钮就不显示
         }
     });
 
