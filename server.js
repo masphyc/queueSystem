@@ -57,34 +57,83 @@ app.get('/api/seats', (req, res) => {
 app.post('/api/occupy', (req, res) => {
     const { seat_id, user_name } = req.body;
 
-    // 检查座位是否空闲
-    db.get("SELECT status FROM seats WHERE id = ?", [seat_id], (err, row) => {
+    // 检查用户是否已经占用其他座位
+    db.get("SELECT * FROM seats WHERE name = ?", [user_name], (err, currentSeat) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
         }
 
-        if (row.status === 'free') {
-            // 占用座位
-            db.run("UPDATE seats SET status = ?, name = ? WHERE id = ?", ['occupied', user_name, seat_id], function(err) {
+        let releasedSeatName = null;
+        
+        // 如果用户占用了其他座位，释放该座位
+        if (currentSeat) {
+            db.run("UPDATE seats SET status = 'free', name = NULL WHERE id = ?", [currentSeat.id], function(err) {
                 if (err) {
                     res.status(500).json({ error: err.message });
                     return;
                 }
-                io.emit('update');  // 发送实时更新
-                res.json({ success: true });
-            });
-        } else {
-            // 座位已被占用，加入队列
-            db.run("INSERT INTO queue (seat_id, user_name) VALUES (?, ?)", [seat_id, user_name], function(err) {
-                if (err) {
-                    res.status(500).json({ error: err.message });
-                    return;
-                }
-                io.emit('update');  // 发送实时更新
-                res.json({ success: true, queued: true });
+                releasedSeatName = currentSeat.name;
             });
         }
+
+        // 检查座位是否空闲
+        db.get("SELECT status FROM seats WHERE id = ?", [seat_id], (err, row) => {
+            if (err) {
+                res.status(500).json({ error: err.message });
+                return;
+            }
+
+            if (row.status === 'free') {
+                // 占用座位
+                db.run("UPDATE seats SET status = ?, name = ? WHERE id = ?", ['occupied', user_name, seat_id], function(err) {
+                    if (err) {
+                        res.status(500).json({ error: err.message });
+                        return;
+                    }
+                    io.emit('update');  // 发送实时更新
+                    res.json({ success: true, released: releasedSeatName, releasedSeatName: currentSeat ? currentSeat.name : null });
+                });
+            } else {
+                // 座位已被占用，加入队列
+                db.run("INSERT INTO queue (seat_id, user_name) VALUES (?, ?)", [seat_id, user_name], function(err) {
+                    if (err) {
+                        res.status(500).json({ error: err.message });
+                        return;
+                    }
+                    io.emit('update');  // 发送实时更新
+                    res.json({ success: true, queued: true });
+                });
+            }
+        });
+    });
+});
+
+// 释放座位
+app.post('/api/release', (req, res) => {
+    const { seat_id, user_name } = req.body;
+
+    // 检查用户是否占用了该座位
+    db.get("SELECT * FROM seats WHERE id = ? AND name = ?", [seat_id, user_name], (err, row) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+
+        if (!row) {
+            res.status(403).json({ error: '您未占用此座位，无法释放' });
+            return;
+        }
+
+        // 释放座位
+        db.run("UPDATE seats SET status = 'free', name = NULL WHERE id = ?", [seat_id], function(err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+                return;
+            }
+            io.emit('update');  // 发送实时更新
+            res.json({ success: true });
+        });
     });
 });
 
