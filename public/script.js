@@ -107,6 +107,13 @@ function renderSeats(seats) {
 
 // 更新计时器
 function updateTimer(element, startTime) {
+    console.log("Start time from backend: ", startTime);  // 打印startTime值
+
+    if (!startTime || isNaN(startTime)) {
+        element.innerText = "计时出错，请刷新页面。";
+        return;
+    }
+
     const now = Date.now();  // 获取当前时间的时间戳
     const elapsed = now - startTime;  // 计算时间差
 
