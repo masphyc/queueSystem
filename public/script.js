@@ -149,6 +149,11 @@ function renderSeats(seats) {
             seatDiv.style.backgroundColor = 'lightgray';
         }
 
+        // 管理员自己占用的座位显示为红色
+        if (seat.occupiedBy === userName && isAdmin) {
+            seatDiv.style.backgroundColor = 'red';
+        }
+
         seatsDiv.appendChild(seatDiv);
     });
 }
@@ -179,21 +184,23 @@ function renderQueue(queue) {
         queueDiv.innerText = '当前没有人在排队';
     } else {
         const queueList = document.createElement('ul');
-        queueList.style.textAlign = 'center';  // 居中显示队列
+        queueList.classList.add('queue-list');
 
         queue.forEach(user => {
-            const userItem = document.createElement('li');
-            userItem.innerText = user.user_name;
+            const queueItem = document.createElement('li');
+            queueItem.classList.add('queue-item');
+
+            const userNameSpan = document.createElement('span');
+            userNameSpan.innerText = user.user_name;
+            queueItem.appendChild(userNameSpan);
 
             const cancelButton = document.createElement('button');
             cancelButton.innerText = '取消排队';
             cancelButton.addEventListener('click', () => {
                 cancelQueue(user.user_name);
             });
-
-            const queueItem = document.createElement('div');
-            queueItem.appendChild(userItem);
             queueItem.appendChild(cancelButton);
+
             queueList.appendChild(queueItem);
         });
 
@@ -201,21 +208,42 @@ function renderQueue(queue) {
     }
 }
 
+// 加入队列
+function joinQueue() {
+    fetch('/api/join-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_name: userName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('您已成功加入队列');
+            loadQueue();
+        } else {
+            alert('加入队列失败：' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('加入队列时出错:', error);
+    });
+}
+
 // 占用座位
 function occupySeat(seat_id) {
     fetch('/api/occupy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_name: userName, seat_id })  // 传递 seat_id
+        body: JSON.stringify({ user_name: userName, seat_id })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             alert(`成功占用座位：${data.seatName}`);
-            loadSeats();  // 更新座位信息
+            loadSeats();
         } else if (data.queued) {
             alert('座位已满，您已加入队列');
-            loadQueue();  // 更新队列信息
+            loadQueue();
         } else {
             alert('占用座位失败：' + data.error);
         }
@@ -267,7 +295,7 @@ function cancelQueue(user_name) {
     });
 }
 
-// 关闭座位
+// 关闭座位（管理员权限）
 function closeSeat(seat_id) {
     fetch('/api/close-seat', {
         method: 'POST',
@@ -288,7 +316,7 @@ function closeSeat(seat_id) {
     });
 }
 
-// 打开座位
+// 打开座位（管理员权限）
 function openSeat(seat_id) {
     fetch('/api/open-seat', {
         method: 'POST',
