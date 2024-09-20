@@ -43,6 +43,13 @@ function renderSeats(seats) {
         seatName.innerText = seat.name;
         seatDiv.appendChild(seatName);
 
+        // 显示当前占用者的名字
+        if (seat.occupiedBy) {
+            const occupiedByText = document.createElement('p');
+            occupiedByText.innerText = `当前占用者: ${seat.occupiedBy}`;
+            seatDiv.appendChild(occupiedByText);
+        }
+
         const actionButton = document.createElement('button');
         
         if (seat.status === 'free') {
@@ -51,7 +58,7 @@ function renderSeats(seats) {
                 console.log('占用:', seat.name);  // 调试用
                 occupySeat(seat.id);
             });
-        } else if (seat.name === userName) {
+        } else if (seat.occupiedBy === userName) {
             // 如果用户已经占用了这个座位，显示释放按钮
             actionButton.innerText = '释放';
             actionButton.addEventListener('click', () => {

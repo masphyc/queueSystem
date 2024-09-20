@@ -20,8 +20,9 @@ const db = new sqlite3.Database('./queue.db');
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS seats (
         id INTEGER PRIMARY KEY,
-        name TEXT,
-        status TEXT
+        name TEXT,         -- 座位的名称，如 "AP左"
+        status TEXT,       -- 座位状态 "free" 或 "occupied"
+        occupiedBy TEXT    -- 占用者的名字
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS queue (
@@ -33,10 +34,10 @@ db.serialize(() => {
     // 初始化座位（AP左，AP右，CA）如果表为空
     db.get("SELECT COUNT(*) as count FROM seats", (err, row) => {
         if (row.count === 0) {
-            const stmt = db.prepare("INSERT INTO seats (name, status) VALUES (?, ?)");
-            stmt.run("AP左", "free");
-            stmt.run("AP右", "free");
-            stmt.run("CA", "free");
+            const stmt = db.prepare("INSERT INTO seats (name, status, occupiedBy) VALUES (?, 'free', NULL)");
+            stmt.run("AP左");
+            stmt.run("AP右");
+            stmt.run("CA");
             stmt.finalize();
         }
     });
@@ -58,7 +59,7 @@ app.post('/api/occupy', (req, res) => {
     const { seat_id, user_name } = req.body;
 
     // 检查用户是否已经占用其他座位
-    db.get("SELECT * FROM seats WHERE name = ?", [user_name], (err, currentSeat) => {
+    db.get("SELECT * FROM seats WHERE occupiedBy = ?", [user_name], (err, currentSeat) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
@@ -68,7 +69,7 @@ app.post('/api/occupy', (req, res) => {
         
         // 如果用户占用了其他座位，释放该座位
         if (currentSeat) {
-            db.run("UPDATE seats SET status = 'free', name = NULL WHERE id = ?", [currentSeat.id], function(err) {
+            db.run("UPDATE seats SET status = 'free', occupiedBy = NULL WHERE id = ?", [currentSeat.id], function(err) {
                 if (err) {
                     res.status(500).json({ error: err.message });
                     return;
@@ -86,7 +87,7 @@ app.post('/api/occupy', (req, res) => {
 
             if (row.status === 'free') {
                 // 占用座位
-                db.run("UPDATE seats SET status = ?, name = ? WHERE id = ?", ['occupied', user_name, seat_id], function(err) {
+                db.run("UPDATE seats SET status = ?, occupiedBy = ? WHERE id = ?", ['occupied', user_name, seat_id], function(err) {
                     if (err) {
                         res.status(500).json({ error: err.message });
                         return;
@@ -114,7 +115,7 @@ app.post('/api/release', (req, res) => {
     const { seat_id, user_name } = req.body;
 
     // 检查用户是否占用了该座位
-    db.get("SELECT * FROM seats WHERE id = ? AND name = ?", [seat_id, user_name], (err, row) => {
+    db.get("SELECT * FROM seats WHERE id = ? AND occupiedBy = ?", [seat_id, user_name], (err, row) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
@@ -126,7 +127,7 @@ app.post('/api/release', (req, res) => {
         }
 
         // 释放座位
-        db.run("UPDATE seats SET status = 'free', name = NULL WHERE id = ?", [seat_id], function(err) {
+        db.run("UPDATE seats SET status = 'free', occupiedBy = NULL WHERE id = ?", [seat_id], function(err) {
             if (err) {
                 res.status(500).json({ error: err.message });
                 return;
