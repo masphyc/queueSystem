@@ -206,16 +206,16 @@ function occupySeat(seat_id) {
     fetch('/api/occupy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_name: userName })
+        body: JSON.stringify({ user_name: userName, seat_id })  // 传递 seat_id
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             alert(`成功占用座位：${data.seatName}`);
-            loadSeats();
+            loadSeats();  // 更新座位信息
         } else if (data.queued) {
             alert('座位已满，您已加入队列');
-            loadQueue();
+            loadQueue();  // 更新队列信息
         } else {
             alert('占用座位失败：' + data.error);
         }
