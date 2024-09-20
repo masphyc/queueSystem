@@ -71,17 +71,6 @@ app.get('/api/seats', async (req, res) => {
     }
 });
 
-// 获取某个座位的队列
-app.get('/api/queue/:seat_id', async (req, res) => {
-    const seatId = req.params.seat_id;
-    try {
-        const result = await pool.query('SELECT * FROM queue WHERE seat_id = $1 ORDER BY id ASC', [seatId]);
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
 // 占用座位
 app.post('/api/occupy', async (req, res) => {
     const { seat_id, user_name } = req.body;
@@ -101,58 +90,6 @@ app.post('/api/occupy', async (req, res) => {
             await pool.query('INSERT INTO queue (seat_id, user_name) VALUES ($1, $2)', [seat_id, user_name]);
             io.emit('update');
             res.json({ success: true, queued: true });
-        }
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 释放座位
-app.post('/api/release', async (req, res) => {
-    const { seat_id, user_name } = req.body;
-    try {
-        // 确认释放者是当前占用者
-        const seat = await pool.query('SELECT name FROM seats WHERE id = $1', [seat_id]);
-        if (seat.rows.length === 0) {
-            return res.status(404).json({ error: '座位不存在' });
-        }
-
-        if (seat.rows[0].name !== user_name) {
-            return res.status(403).json({ error: '您不是当前占用者，无法释放座位' });
-        }
-
-        // 查找队列中的下一个用户
-        const nextUser = await pool.query('SELECT * FROM queue WHERE seat_id = $1 ORDER BY id ASC LIMIT 1', [seat_id]);
-
-        if (nextUser.rows.length > 0) {
-            const next = nextUser.rows[0];
-            // 更新座位为被下一个用户占用
-            await pool.query('UPDATE seats SET status = $1, name = $2 WHERE id = $3', ['occupied', next.user_name, seat_id]);
-            // 从队列中移除该用户
-            await pool.query('DELETE FROM queue WHERE id = $1', [next.id]);
-            io.emit('update');
-            res.json({ success: true, nextUser: next.user_name });
-        } else {
-            // 没有排队的人，释放座位
-            await pool.query('UPDATE seats SET status = $1, name = NULL WHERE id = $2', ['free', seat_id]);
-            io.emit('update');
-            res.json({ success: true });
-        }
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 取消排队
-app.post('/api/cancel', async (req, res) => {
-    const { seat_id, user_name } = req.body;
-    try {
-        const result = await pool.query('DELETE FROM queue WHERE seat_id = $1 AND user_name = $2', [seat_id, user_name]);
-        if (result.rowCount > 0) {
-            io.emit('update');
-            res.json({ success: true });
-        } else {
-            res.status(404).json({ error: '未找到排队记录' });
         }
     } catch (err) {
         res.status(500).json({ error: err.message });
