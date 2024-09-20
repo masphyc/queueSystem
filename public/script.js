@@ -153,11 +153,16 @@ function renderSeats(seats) {
 
         seatsDiv.appendChild(seatDiv);
 
-        // 如果有空闲座位或者有未关闭的座位，表示不需要显示排队按钮
+        // 调试输出，查看每个座位的状态
+        console.log(`座位: ${seat.name}, 状态: ${seat.status}, 是否关闭: ${seat.isClosed}`);
+
+        // 如果有空闲座位或者有未关闭的座位，则不显示排队按钮
         if (seat.status === 'free' || !seat.isClosed) {
             allOccupiedOrClosed = false;
         }
     });
+
+    console.log("所有座位是否被占用或关闭: ", allOccupiedOrClosed);  // 调试信息
 
     // 如果所有座位都被占用或关闭，显示排队按钮
     if (allOccupiedOrClosed) {
