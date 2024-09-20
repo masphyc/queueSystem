@@ -1,21 +1,40 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>物控后台排队系统</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>物控后台排队系统</h1>
-    <div id="login">
-        <h2>请输入您的名字</h2>
-        <input type="text" id="username" placeholder="名字">
+    <!-- 登录页面 -->
+    <div id="login" style="display: block;">
+        <h1>欢迎使用物控后台排队系统</h1>
+        <label for="username">请输入您的姓名:</label>
+        <input type="text" id="username" name="username">
         <button id="enter">进入系统</button>
     </div>
 
+    <!-- 主界面 -->
     <div id="main" style="display: none;">
-        <h2>欢迎，<span id="displayName"></span></h2>
-        <div id="seats"></div>
+        <h1>物控后台排队系统</h1>
+        <p>当前用户: <span id="displayName"></span></p>
+
+        <!-- 座位信息 -->
+        <div id="seats">
+            <!-- 座位将通过JavaScript动态填充 -->
+        </div>
+
+        <!-- 排队信息 -->
+        <div id="queue">
+            <h2>排队信息</h2>
+            <!-- 队列将通过JavaScript动态填充 -->
+        </div>
+    </div>
+
+    <!-- 右上角退出按钮 -->
+    <div id="logout" style="position: fixed; top: 10px; right: 10px;">
+        <button id="logoutButton">退出</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
