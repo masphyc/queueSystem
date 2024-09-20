@@ -34,6 +34,10 @@ db.serialize(() => {
 
     // 初始化座位（AP左，AP右，CA）如果表为空
     db.get("SELECT COUNT(*) as count FROM seats", (err, row) => {
+        if (err) {
+            console.error("初始化座位时出错:", err.message);
+            return;
+        }
         if (row.count === 0) {
             const stmt = db.prepare("INSERT INTO seats (name, status, occupiedBy, startTime, isClosed) VALUES (?, 'free', NULL, NULL, 0)");
             stmt.run("AP左");

@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('displayName').innerText = userName;
         document.getElementById('login').style.display = 'none';
         document.getElementById('main').style.display = 'block';
-        loadSeats();  // 加载座位信息
-        loadQueue();  // 加载排队信息
+        loadSeats();
+        loadQueue();
     }
 });
 

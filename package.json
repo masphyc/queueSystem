@@ -1,21 +1,19 @@
 {
-  "name": "queue-system",
+  "name": "seat-reservation-system",
   "version": "1.0.0",
-  "description": "A simple queue management system with socket.io and SQLite",
+  "description": "物控后台排队系统",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "express": "^4.21.0",
-    "socket.io": "^4.7.5",
-    "sqlite3": "^5.1.7"
+    "express": "^4.18.2",
+    "socket.io": "^4.5.4",
+    "sqlite3": "^5.1.6"
   },
   "engines": {
-    "node": ">=14.x"
-  }
+    "node": ">=14.0.0"
+  },
+  "author": "您的名字",
+  "license": "ISC"
 }

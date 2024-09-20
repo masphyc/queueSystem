@@ -102,6 +102,10 @@ header h1 {
     margin-top: 0;
 }
 
+.seat p {
+    margin: 5px 0;
+}
+
 .seat button {
     margin-top: 10px;
     padding: 5px 10px;
@@ -136,6 +140,7 @@ header h1 {
     list-style-type: none;
     padding: 0;
     width: 300px;
+    text-align: center; /* 居中显示队列 */
 }
 
 .queue-item {
