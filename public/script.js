@@ -56,7 +56,6 @@ function loadSeats() {
     fetch('/api/seats')
         .then(response => response.json())
         .then(data => {
-            console.log('加载的座位数据:', data);  // 调试用
             renderSeats(data);
         })
         .catch(error => {
@@ -69,7 +68,6 @@ function loadQueue() {
     fetch('/api/queue')
         .then(response => response.json())
         .then(data => {
-            console.log('加载的队列数据:', data);  // 调试用
             renderQueue(data);
         })
         .catch(error => {
@@ -111,10 +109,20 @@ function renderSeats(seats) {
             }
 
             seatDiv.appendChild(timeDisplay);
+
+            // 如果当前用户是占用者，显示释放按钮
+            if (seat.occupiedBy === userName) {
+                const releaseButton = document.createElement('button');
+                releaseButton.innerText = '释放';
+                releaseButton.addEventListener('click', () => {
+                    releaseSeat();  // 释放座位逻辑
+                });
+                seatDiv.appendChild(releaseButton);
+            }
         }
 
-        // 如果是管理员，提供关闭按钮
-        if (isAdmin) {
+        // 如果是管理员，并且不是自己占用，显示关闭按钮
+        if (isAdmin && seat.occupiedBy !== userName) {
             const closeButton = document.createElement('button');
             closeButton.innerText = seat.isClosed ? '打开座位' : '关闭座位';
             closeButton.addEventListener('click', () => {
@@ -123,6 +131,7 @@ function renderSeats(seats) {
             seatDiv.appendChild(closeButton);
         }
 
+        // 如果座位是空闲状态并且没有被关闭，显示占用按钮
         if (seat.status === 'free' && !seat.isClosed) {
             const actionButton = document.createElement('button');
             actionButton.innerText = '占用';
@@ -136,6 +145,11 @@ function renderSeats(seats) {
         if (seat.isClosed) {
             seatDiv.classList.add('closed');
             seatDiv.style.backgroundColor = 'lightgray';
+        }
+
+        // 管理员自己占用的座位显示为红色
+        if (seat.occupiedBy === userName && isAdmin) {
+            seatDiv.style.backgroundColor = 'red';
         }
 
         seatsDiv.appendChild(seatDiv);
