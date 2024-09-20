@@ -20,11 +20,11 @@ const db = new sqlite3.Database('./queue.db');
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS seats (
         id INTEGER PRIMARY KEY,
-        name TEXT,         -- 座位的名称，如 "AP左"
-        status TEXT,       -- 座位状态 "free" 或 "occupied"
-        occupiedBy TEXT,   -- 占用者的名字
-        startTime INTEGER, -- 占用开始的时间戳
-        isClosed INTEGER DEFAULT 0  -- 表示座位是否已被管理员关闭（0 表示未关闭，1 表示关闭）
+        name TEXT,
+        status TEXT,
+        occupiedBy TEXT,
+        startTime INTEGER,
+        isClosed INTEGER DEFAULT 0
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS queue (
@@ -32,7 +32,6 @@ db.serialize(() => {
         user_name TEXT
     )`);
 
-    // 初始化座位（AP左，AP右，CA）如果表为空
     db.get("SELECT COUNT(*) as count FROM seats", (err, row) => {
         if (row.count === 0) {
             const stmt = db.prepare("INSERT INTO seats (name, status, occupiedBy, startTime, isClosed) VALUES (?, 'free', NULL, NULL, 0)");
@@ -90,7 +89,6 @@ app.post('/api/occupy', (req, res) => {
             }
 
             if (seat) {
-                // 占用空闲座位
                 const startTime = Date.now();
                 db.run("UPDATE seats SET status = 'occupied', occupiedBy = ?, startTime = ? WHERE id = ?", [user_name, startTime, seat.id], function(err) {
                     if (err) {
@@ -119,7 +117,6 @@ app.post('/api/occupy', (req, res) => {
 app.post('/api/release', (req, res) => {
     const { user_name } = req.body;
 
-    // 查找用户占用的座位
     db.get("SELECT * FROM seats WHERE occupiedBy = ?", [user_name], (err, seat) => {
         if (err) {
             res.status(500).json({ error: err.message });
@@ -147,20 +144,19 @@ app.post('/api/release', (req, res) => {
 
                 if (nextUser) {
                     const startTime = Date.now();
-                    // 为下一个排队用户分配座位
                     db.run("UPDATE seats SET status = 'occupied', occupiedBy = ?, startTime = ? WHERE id = ?", [nextUser.user_name, startTime, seat.id], function(err) {
                         if (err) {
                             res.status(500).json({ error: err.message });
                             return;
                         }
-                        // 从队列中删除该用户
                         db.run("DELETE FROM queue WHERE id = ?", [nextUser.id], function(err) {
                             if (err) {
                                 res.status(500).json({ error: err.message });
                                 return;
                             }
-                            io.emit('update');  // 发送实时座位更新
-                            io.emit('queue_update');  // 发送实时队列更新
+                            io.emit('update');  // 发送座位更新
+                            io.emit('queue_update');  // 发送队列更新
+                            io.emit('user_notified', { user_name: nextUser.user_name, seatName: seat.name });  // 通知用户
                             res.json({ success: true });
                         });
                     });
