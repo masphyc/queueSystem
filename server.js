@@ -67,7 +67,7 @@ app.get('/api/queue', (req, res) => {
 
 // 占用座位或加入队列
 app.post('/api/occupy', (req, res) => {
-    const { user_name, seat_id } = req.body;  // 现在我们从前端接收座位ID
+    const { user_name, seat_id } = req.body;
 
     // 检查用户是否已经占用其他座位
     db.get("SELECT * FROM seats WHERE occupiedBy = ?", [user_name], (err, currentSeat) => {
@@ -89,8 +89,8 @@ app.post('/api/occupy', (req, res) => {
             }
 
             if (seat) {
-                // 占用指定的空闲座位
                 const startTime = Date.now();
+                // 占用指定的空闲座位
                 db.run("UPDATE seats SET status = 'occupied', occupiedBy = ?, startTime = ? WHERE id = ?", [user_name, startTime, seat.id], function(err) {
                     if (err) {
                         res.status(500).json({ error: err.message });
@@ -172,6 +172,10 @@ app.post('/api/release', (req, res) => {
 // 加入队列
 app.post('/api/join-queue', (req, res) => {
     const { user_name } = req.body;
+
+    if (!user_name) {
+        return res.status(400).json({ success: false, error: '用户名不能为空' });
+    }
 
     db.run("INSERT INTO queue (user_name) VALUES (?)", function(err) {
         if (err) {
