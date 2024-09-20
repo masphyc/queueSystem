@@ -195,12 +195,12 @@ app.post('/api/close-seat', (req, res) => {
         return;
     }
 
-    db.run("UPDATE seats SET isClosed = 1 WHERE id = ?", [seat_id], function(err) {
+    db.run("UPDATE seats SET isClosed = 1, status = 'free' WHERE id = ?", [seat_id], function(err) {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
         }
-        io.emit('update');  // 发送座位更新
+        io.emit('update');  // 实时更新
         res.json({ success: true });
     });
 });
@@ -219,7 +219,7 @@ app.post('/api/open-seat', (req, res) => {
             res.status(500).json({ error: err.message });
             return;
         }
-        io.emit('update');  // 发送座位更新
+        io.emit('update');  // 实时更新
         res.json({ success: true });
     });
 });

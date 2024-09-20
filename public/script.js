@@ -1,6 +1,19 @@
 let userName = '';  // 存储用户名
 let isAdmin = false;  // 判断用户是否是管理员
 
+document.addEventListener('DOMContentLoaded', () => {
+    const savedName = localStorage.getItem('username');
+    if (savedName) {
+        userName = savedName;
+        isAdmin = (userName === 'Hadrian');  // 检查是否为管理员
+        document.getElementById('displayName').innerText = userName;
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('main').style.display = 'block';
+        loadSeats();  // 加载座位信息
+        loadQueue();  // 加载排队信息
+    }
+});
+
 document.getElementById('enter').addEventListener('click', () => {
     const nameInput = document.getElementById('username').value.trim();
 
@@ -10,13 +23,23 @@ document.getElementById('enter').addEventListener('click', () => {
     }
 
     userName = nameInput;
-    isAdmin = (userName === 'Hadrian');  // 如果用户是 Hadrian，赋予管理员权限
+    isAdmin = (userName === 'Hadrian');
+    localStorage.setItem('username', userName);  // 将用户名存储到 localStorage
     document.getElementById('displayName').innerText = userName;
     document.getElementById('login').style.display = 'none';
     document.getElementById('main').style.display = 'block';
 
-    loadSeats();  // 加载座位信息
-    loadQueue();  // 加载排队信息
+    loadSeats();
+    loadQueue();
+});
+
+// 连接Socket.io
+const socket = io();
+
+// 监听座位更新事件
+socket.on('update', () => {
+    loadSeats();  // 实时加载座位
+    loadQueue();  // 实时加载队列
 });
 
 // 加载座位信息
@@ -48,6 +71,8 @@ function loadQueue() {
 // 渲染座位
 function renderSeats(seats) {
     const seatsDiv = document.getElementById('seats');
+    let allOccupiedOrClosed = true;  // 用来判断是否显示排队按钮
+
     seatsDiv.innerHTML = '';  // 清空之前的座位信息
 
     seats.forEach(seat => {
@@ -65,12 +90,14 @@ function renderSeats(seats) {
             occupiedByText.innerText = `当前占用者: ${seat.occupiedBy}`;
             seatDiv.appendChild(occupiedByText);
 
-            // 计时器显示占用时长
-            const startTime = seat.startTime;  // 从后端传来的时间戳
-            const timeDisplay = document.createElement('p');
-            updateTimer(timeDisplay, startTime);  // 初始化显示
-            setInterval(() => updateTimer(timeDisplay, startTime), 1000);  // 每秒更新
-            seatDiv.appendChild(timeDisplay);
+            // 延迟几百毫秒，确保 startTime 已经更新到页面
+            setTimeout(() => {
+                const startTime = seat.startTime;  // 从后端传来的时间戳
+                const timeDisplay = document.createElement('p');
+                updateTimer(timeDisplay, startTime);  // 初始化显示
+                setInterval(() => updateTimer(timeDisplay, startTime), 1000);  // 每秒更新
+                seatDiv.appendChild(timeDisplay);
+            }, 300);
         }
 
         // 如果是管理员，提供关闭按钮
@@ -83,37 +110,41 @@ function renderSeats(seats) {
             seatDiv.appendChild(closeButton);
         }
 
-        const actionButton = document.createElement('button');
-        
-        if (seat.status === 'free') {
+        if (seat.status === 'free' && !seat.isClosed) {
+            const actionButton = document.createElement('button');
             actionButton.innerText = '占用';
             actionButton.addEventListener('click', () => {
-                console.log('占用:', seat.name);  // 调试用
                 occupySeat(seat.id);
             });
-        } else if (seat.occupiedBy === userName) {
-            // 如果用户已经占用了这个座位，显示释放按钮
-            actionButton.innerText = '释放';
-            actionButton.addEventListener('click', () => {
-                console.log('释放:', seat.name);  // 调试用
-                releaseSeat(seat.id);
-            });
+            seatDiv.appendChild(actionButton);
         }
 
-        seatDiv.appendChild(actionButton);
+        // 如果座位被关闭，设置为灰色，并且禁用按钮
+        if (seat.isClosed) {
+            seatDiv.classList.add('closed');
+            seatDiv.style.backgroundColor = 'lightgray';
+        }
+
         seatsDiv.appendChild(seatDiv);
+
+        if (seat.status === 'free' && !seat.isClosed) {
+            allOccupiedOrClosed = false;  // 有空闲座位
+        }
     });
+
+    // 显示排队按钮
+    if (allOccupiedOrClosed) {
+        const queueButton = document.createElement('button');
+        queueButton.innerText = '加入排队';
+        queueButton.addEventListener('click', () => {
+            joinQueue();  // 加入队列逻辑
+        });
+        seatsDiv.appendChild(queueButton);
+    }
 }
 
 // 更新计时器
 function updateTimer(element, startTime) {
-    console.log("Start time from backend: ", startTime);  // 打印startTime值
-
-    if (!startTime || isNaN(startTime)) {
-        element.innerText = "计时出错，请刷新页面。";
-        return;
-    }
-
     const now = Date.now();  // 获取当前时间的时间戳
     const elapsed = now - startTime;  // 计算时间差
 
