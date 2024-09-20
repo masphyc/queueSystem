@@ -107,7 +107,7 @@ app.post('/api/occupy', (req, res) => {
                         res.status(500).json({ error: err.message });
                         return;
                     }
-                    io.emit('update');  // 发送实时更新
+                    io.emit('queue_update');  // 发送实时队列更新
                     res.json({ success: true, queued: true });
                 });
             }
@@ -159,8 +159,8 @@ app.post('/api/release', (req, res) => {
                                 res.status(500).json({ error: err.message });
                                 return;
                             }
-                            io.emit('queue_update');  // 发送排队更新
-                            io.emit('user_notified', { user_name: nextUser.user_name, seatName: seat.name });  // 提醒下一个用户
+                            io.emit('update');  // 发送实时座位更新
+                            io.emit('queue_update');  // 发送实时队列更新
                             res.json({ success: true });
                         });
                     });
@@ -169,6 +169,20 @@ app.post('/api/release', (req, res) => {
                 }
             });
         });
+    });
+});
+
+// 加入队列
+app.post('/api/join-queue', (req, res) => {
+    const { user_name } = req.body;
+
+    db.run("INSERT INTO queue (user_name) VALUES (?)", function(err) {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        io.emit('queue_update');  // 实时更新队列
+        res.json({ success: true });
     });
 });
 

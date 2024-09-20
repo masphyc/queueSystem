@@ -51,6 +51,11 @@ socket.on('update', () => {
     loadQueue();  // 实时加载队列
 });
 
+// 监听队列更新事件
+socket.on('queue_update', () => {
+    loadQueue();  // 实时更新队列
+});
+
 // 加载座位信息
 function loadSeats() {
     fetch('/api/seats')
@@ -100,9 +105,9 @@ function renderSeats(seats) {
             const startTime = seat.startTime;
             const timeDisplay = document.createElement('p');
 
-            // 检查 startTime 是否有效，如果无效则显示 0
+            // 检查 startTime 是否有效，如果无效则显示 "占座中..."
             if (!startTime || isNaN(startTime)) {
-                timeDisplay.innerText = "占用时长: 0小时 0分钟 0秒";
+                timeDisplay.innerText = "占座中...";
             } else {
                 updateTimer(timeDisplay, startTime);  // 初始化显示
                 setInterval(() => updateTimer(timeDisplay, startTime), 1000);  // 每秒更新
@@ -176,7 +181,7 @@ function updateTimer(element, startTime) {
     const elapsed = now - startTime;  // 计算时间差
 
     if (elapsed < 0 || isNaN(elapsed)) {
-        element.innerText = "计时出错，请刷新页面。";
+        element.innerText = "占座中...";
         return;
     }
 
@@ -203,6 +208,27 @@ function renderQueue(queue) {
         });
         queueDiv.appendChild(queueList);
     }
+}
+
+// 加入队列
+function joinQueue() {
+    fetch('/api/join-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_name: userName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('您已成功加入队列');
+            loadQueue();  // 更新队列信息
+        } else {
+            alert('加入队列失败：' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('加入队列时出错:', error);
+    });
 }
 
 // 占用座位
