@@ -88,9 +88,9 @@ function loadQueue() {
 // 渲染座位
 function renderSeats(seats) {
     const seatsDiv = document.getElementById('seats');
-    let allOccupiedOrClosed = true;
+    let allOccupiedOrClosed = true;  // 标志位判断是否所有座位都被占用或关闭
 
-    seatsDiv.innerHTML = '';
+    seatsDiv.innerHTML = '';  // 清空之前的座位信息
 
     seats.forEach(seat => {
         const seatDiv = document.createElement('div');
@@ -101,6 +101,7 @@ function renderSeats(seats) {
         seatName.innerText = seat.name;
         seatDiv.appendChild(seatName);
 
+        // 显示占用者的名字和计时
         if (seat.occupiedBy) {
             const occupiedByText = document.createElement('p');
             occupiedByText.innerText = `当前占用者: ${seat.occupiedBy}`;
@@ -112,22 +113,24 @@ function renderSeats(seats) {
             if (!startTime || isNaN(startTime)) {
                 timeDisplay.innerText = "占座中...";
             } else {
-                updateTimer(timeDisplay, startTime);
-                setInterval(() => updateTimer(timeDisplay, startTime), 1000);
+                updateTimer(timeDisplay, startTime);  // 初始化显示
+                setInterval(() => updateTimer(timeDisplay, startTime), 1000);  // 每秒更新
             }
 
             seatDiv.appendChild(timeDisplay);
 
+            // 显示释放按钮
             if (seat.occupiedBy === userName) {
                 const releaseButton = document.createElement('button');
                 releaseButton.innerText = '释放';
                 releaseButton.addEventListener('click', () => {
-                    releaseSeat();
+                    releaseSeat();  // 释放座位逻辑
                 });
                 seatDiv.appendChild(releaseButton);
             }
         }
 
+        // 管理员显示关闭按钮
         if (isAdmin && seat.occupiedBy !== userName) {
             const closeButton = document.createElement('button');
             closeButton.innerText = seat.isClosed ? '打开座位' : '关闭座位';
@@ -137,6 +140,7 @@ function renderSeats(seats) {
             seatDiv.appendChild(closeButton);
         }
 
+        // 空闲座位显示占用按钮
         if (seat.status === 'free' && !seat.isClosed) {
             const actionButton = document.createElement('button');
             actionButton.innerText = '占用';
@@ -146,6 +150,7 @@ function renderSeats(seats) {
             seatDiv.appendChild(actionButton);
         }
 
+        // 如果座位已关闭，设置为灰色，并且禁用按钮
         if (seat.isClosed) {
             seatDiv.classList.add('closed');
             seatDiv.style.backgroundColor = 'lightgray';
@@ -153,16 +158,18 @@ function renderSeats(seats) {
 
         seatsDiv.appendChild(seatDiv);
 
+        // 如果有空闲座位或者有未关闭的座位，则不显示排队按钮
         if (seat.status === 'free' || !seat.isClosed) {
-            allOccupiedOrClosed = false;
+            allOccupiedOrClosed = false;  // 有空闲或未关闭座位
         }
     });
 
+    // 如果所有座位都被占用或关闭，显示排队按钮
     if (allOccupiedOrClosed) {
         const queueButton = document.createElement('button');
         queueButton.innerText = '加入排队';
         queueButton.addEventListener('click', () => {
-            joinQueue();
+            joinQueue();  // 加入队列逻辑
         });
         seatsDiv.appendChild(queueButton);
     }
