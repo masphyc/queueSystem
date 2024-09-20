@@ -118,6 +118,7 @@ function renderSeats(seats) {
 
             seatDiv.appendChild(timeDisplay);
 
+            // 只有当前用户能看到“释放”按钮
             if (seat.occupiedBy === userName) {
                 const releaseButton = document.createElement('button');
                 releaseButton.innerText = '释放';
@@ -128,6 +129,7 @@ function renderSeats(seats) {
             }
         }
 
+        // 如果是管理员，显示关闭/打开座位的按钮
         if (isAdmin && seat.occupiedBy !== userName) {
             const closeButton = document.createElement('button');
             closeButton.innerText = seat.isClosed ? '打开座位' : '关闭座位';
@@ -152,20 +154,7 @@ function renderSeats(seats) {
         }
 
         seatsDiv.appendChild(seatDiv);
-
-        // 如果有任何座位是空闲状态（free），则不应该显示排队按钮
-        if (seat.status === 'free') {
-            allOccupiedOrClosed = false;
-        }
     });
-
-    // 如果所有座位都被占用或关闭，显示排队按钮
-    if (allOccupiedOrClosed) {
-        const queueButton = document.createElement('button');
-        queueButton.innerText = '加入排队';
-        queueButton.addEventListener('click', joinQueue);  // 调用joinQueue函数
-        seatsDiv.appendChild(queueButton);
-    }
 }
 
 // 更新计时器
@@ -200,16 +189,17 @@ function renderQueue(queue) {
             const userItem = document.createElement('li');
             userItem.innerText = user.user_name;
 
-            const cancelButton = document.createElement('button');
-            cancelButton.innerText = '取消排队';
-            cancelButton.addEventListener('click', () => {
-                cancelQueue(user.user_name);
-            });
+            // 只显示当前用户自己的“取消排队”按钮
+            if (user.user_name === userName) {
+                const cancelButton = document.createElement('button');
+                cancelButton.innerText = '取消排队';
+                cancelButton.addEventListener('click', () => {
+                    cancelQueue(user.user_name);
+                });
+                userItem.appendChild(cancelButton);
+            }
 
-            const queueItem = document.createElement('div');
-            queueItem.appendChild(userItem);
-            queueItem.appendChild(cancelButton);
-            queueList.appendChild(queueItem);
+            queueList.appendChild(userItem);
         });
 
         queueDiv.appendChild(queueList);
@@ -258,27 +248,6 @@ function releaseSeat() {
     })
     .catch(error => {
         console.error('释放座位时出错:', error);
-    });
-}
-
-// 加入排队函数
-function joinQueue() {
-    fetch('/api/join-queue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_name: userName })  // 发送用户名给后端
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('已加入队列');
-            loadQueue();  // 更新队列信息
-        } else {
-            alert('加入队列失败：' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('加入队列时出错:', error);
     });
 }
 
