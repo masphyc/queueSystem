@@ -165,9 +165,7 @@ function renderSeats(seats) {
     if (allOccupiedOrClosed) {
         const queueButton = document.createElement('button');
         queueButton.innerText = '加入排队';
-        queueButton.addEventListener('click', () => {
-            joinQueue();  // 调用joinQueue函数
-        });
+        queueButton.addEventListener('click', joinQueue);  // 调用joinQueue函数
         seatsDiv.appendChild(queueButton);
     }
 }
@@ -269,6 +267,27 @@ function releaseSeat() {
     })
     .catch(error => {
         console.error('释放座位时出错:', error);
+    });
+}
+
+// 加入排队函数
+function joinQueue() {
+    fetch('/api/join-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_name: userName })  // 发送用户名给后端
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('已加入队列');
+            loadQueue();  // 更新队列信息
+        } else {
+            alert('加入队列失败：' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('加入队列时出错:', error);
     });
 }
 
