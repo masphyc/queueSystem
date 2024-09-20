@@ -156,6 +156,17 @@ function renderSeats(seats) {
 
         seatsDiv.appendChild(seatDiv);
     });
+
+    // 检查是否所有座位都被占用或关闭，若是则显示“加入排队”按钮
+    const allOccupiedOrClosed = seats.every(seat => seat.status !== 'free' || seat.isClosed);
+    if (allOccupiedOrClosed) {
+        const queueButton = document.createElement('button');
+        queueButton.innerText = '加入排队';
+        queueButton.addEventListener('click', () => {
+            joinQueue();
+        });
+        seatsDiv.appendChild(queueButton);
+    }
 }
 
 // 更新计时器

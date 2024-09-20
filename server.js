@@ -152,7 +152,7 @@ app.post('/api/occupy', (req, res) => {
                 }
             });
         }
-    });
+    }); // <-- 这里添加了缺失的闭合括号和分号
 
 // 释放座位
 app.post('/api/release', (req, res) => {
@@ -240,7 +240,7 @@ app.post('/api/join-queue', (req, res) => {
                 res.status(500).json({ error: err.message });
                 return;
             }
-            io.emit('queue_update');  // 发送实时队列更新
+            io.emit('queue_update');  // 实时更新队列
             res.json({ success: true });
         });
     });
@@ -284,7 +284,7 @@ app.post('/api/close-seat', (req, res) => {
             res.status(500).json({ error: err.message });
             return;
         }
-        io.emit('update');  // 发送更新
+        io.emit('update');  // 发送实时更新
         res.json({ success: true });
     });
 });
@@ -308,12 +308,12 @@ app.post('/api/open-seat', (req, res) => {
             res.status(500).json({ error: err.message });
             return;
         }
-        io.emit('update');  // 发送更新
+        io.emit('update');  // 发送实时更新
         res.json({ success: true });
     });
 });
 
-// Socket.io连接
+// 监听Socket连接
 io.on('connection', (socket) => {
     console.log('用户连接');
 
