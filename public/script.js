@@ -190,7 +190,7 @@ function updateTimer(element, startTime) {
 // 渲染队列
 function renderQueue(queue) {
     const queueDiv = document.getElementById('queue');
-    queueDiv.innerHTML = '';
+    queueDiv.innerHTML = '';  // 清空之前的队列信息
 
     if (queue.length === 0) {
         queueDiv.innerText = '当前没有人在排队';
@@ -199,29 +199,23 @@ function renderQueue(queue) {
         queueList.style.textAlign = 'center';  // 居中显示队列
 
         queue.forEach(user => {
-            const userItem = document.createElement('li');
-            userItem.innerText = user.user_name;
+            const queueItem = document.createElement('li');
+            queueItem.innerText = user.user_name;  // 显示排队用户名
 
-            // 只有排队的用户才能取消自己的排队
+            // 仅显示用户自己能点击的“取消排队”按钮
             if (user.user_name === userName) {
                 const cancelButton = document.createElement('button');
                 cancelButton.innerText = '取消排队';
                 cancelButton.addEventListener('click', () => {
                     cancelQueue(user.user_name);
                 });
-
-                const queueItem = document.createElement('div');
-                queueItem.appendChild(userItem);
                 queueItem.appendChild(cancelButton);
-                queueList.appendChild(queueItem);
-            } else {
-                const queueItem = document.createElement('div');
-                queueItem.appendChild(userItem);
-                queueList.appendChild(queueItem);
             }
+
+            queueList.appendChild(queueItem);
         });
 
-        queueDiv.appendChild(queueList);
+        queueDiv.appendChild(queueList);  // 添加更新后的队列信息
     }
 }
 

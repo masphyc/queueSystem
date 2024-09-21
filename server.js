@@ -179,10 +179,9 @@ app.post('/api/join-queue', (req, res) => {
 
     db.run("INSERT INTO queue (user_name) VALUES (?)", function(err) {
         if (err) {
-            res.status(500).json({ error: err.message });
-            return;
+            return res.status(500).json({ error: err.message });
         }
-        io.emit('queue_update');  // 实时更新队列
+        io.emit('queue_update');  // 通知前端更新队列
         res.json({ success: true });
     });
 });
