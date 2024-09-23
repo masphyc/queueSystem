@@ -1,5 +1,6 @@
 let userName = '';  // 存储用户名
 let isAdmin = false;  // 判断用户是否是管理员
+let timerIntervals = [];  // 存储计时器的数组
 
 document.addEventListener('DOMContentLoaded', () => {
     const savedName = localStorage.getItem('username');
@@ -58,6 +59,15 @@ socket.on('queue_update', () => {
 socket.on('user_notified', ({ user_name, seatName }) => {
     if (userName === user_name) {
         alert(`您已成功占用座位：${seatName}`);
+        loadSeats();
+    }
+});
+
+// 监听用户被踢出的事件
+socket.on('user_kicked', ({ user_name, seatName }) => {
+    if (userName === user_name) {
+        alert(`您占用的座位 "${seatName}" 已被管理员关闭，您已被移除。`);
+        loadSeats();
     }
 });
 
@@ -87,6 +97,10 @@ function loadQueue() {
 
 // 渲染座位
 function renderSeats(seats) {
+    // 清除所有计时器，防止内存泄漏
+    timerIntervals.forEach(interval => clearInterval(interval));
+    timerIntervals = [];
+
     const seatsDiv = document.getElementById('seats');
     let allOccupiedOrClosed = true;  // 标志位判断是否所有座位都被占用或关闭
 
@@ -106,14 +120,15 @@ function renderSeats(seats) {
             occupiedByText.innerText = `当前占用者: ${seat.occupiedBy}`;
             seatDiv.appendChild(occupiedByText);
 
-            const startTime = seat.startTime;
+            const startTime = Number(seat.startTime);
             const timeDisplay = document.createElement('p');
 
             if (!startTime || isNaN(startTime)) {
-                timeDisplay.innerText = "占座中...";
+                timeDisplay.innerText = "占用时长: 0小时 0分钟 0秒";
             } else {
                 updateTimer(timeDisplay, startTime);
-                setInterval(() => updateTimer(timeDisplay, startTime), 1000);
+                const interval = setInterval(() => updateTimer(timeDisplay, startTime), 1000);
+                timerIntervals.push(interval);
             }
 
             seatDiv.appendChild(timeDisplay);
@@ -168,11 +183,12 @@ function renderSeats(seats) {
 
 // 更新计时器
 function updateTimer(element, startTime) {
+    startTime = Number(startTime);
     const now = Date.now();
     const elapsed = now - startTime;
 
     if (elapsed < 0 || isNaN(elapsed)) {
-        element.innerText = "占座中...";
+        element.innerText = "占用时长: 0小时 0分钟 0秒";
         return;
     }
 

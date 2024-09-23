@@ -249,13 +249,46 @@ app.post('/api/close-seat', (req, res) => {
         return;
     }
 
-    db.run("UPDATE seats SET isClosed = 1, status = 'free' WHERE id = ?", [seat_id], function(err) {
+    // 获取座位信息
+    db.get("SELECT * FROM seats WHERE id = ?", [seat_id], (err, seat) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
         }
-        io.emit('update');  // 实时更新
-        res.json({ success: true });
+
+        if (!seat) {
+            res.status(404).json({ error: '座位不存在' });
+            return;
+        }
+
+        if (seat.status === 'occupied' && seat.occupiedBy) {
+            const kickedUser = seat.occupiedBy;
+
+            // 释放座位并关闭
+            db.run("UPDATE seats SET isClosed = 1, status = 'free', occupiedBy = NULL, startTime = NULL WHERE id = ?", [seat_id], function(err) {
+                if (err) {
+                    res.status(500).json({ error: err.message });
+                    return;
+                }
+
+                io.emit('update');  // 实时更新
+
+                // 通知被踢出的用户
+                io.emit('user_kicked', { user_name: kickedUser, seatName: seat.name });
+
+                res.json({ success: true });
+            });
+        } else {
+            // 仅关闭座位
+            db.run("UPDATE seats SET isClosed = 1, status = 'free' WHERE id = ?", [seat_id], function(err) {
+                if (err) {
+                    res.status(500).json({ error: err.message });
+                    return;
+                }
+                io.emit('update');  // 实时更新
+                res.json({ success: true });
+            });
+        }
     });
 });
 
