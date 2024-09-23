@@ -144,6 +144,7 @@ function renderSeats(seats) {
                 occupySeat(seat.id);
             });
             seatDiv.appendChild(actionButton);
+            allOccupiedOrClosed = false;  // 只要有空闲座位，排队按钮就不显示
         }
 
         if (seat.isClosed) {
@@ -152,20 +153,15 @@ function renderSeats(seats) {
         }
 
         seatsDiv.appendChild(seatDiv);
-
-        // 如果有任何座位是空闲状态（free），则不应该显示排队按钮
-        if (seat.status === 'free') {
-            allOccupiedOrClosed = false;  // 只要有空闲座位，排队按钮就不显示
-        }
     });
-
-    console.log("所有座位是否被占用或关闭: ", allOccupiedOrClosed);  // 调试信息
 
     // 如果所有座位都被占用或关闭，显示排队按钮
     if (allOccupiedOrClosed) {
         const queueButton = document.createElement('button');
         queueButton.innerText = '加入排队';
-        queueButton.addEventListener('click', joinQueue);  // 调用joinQueue函数
+        queueButton.addEventListener('click', () => {
+            joinQueue();  // 调用joinQueue函数
+        });
         seatsDiv.appendChild(queueButton);
     }
 }
@@ -190,7 +186,7 @@ function updateTimer(element, startTime) {
 // 渲染队列
 function renderQueue(queue) {
     const queueDiv = document.getElementById('queue');
-    queueDiv.innerHTML = '';  // 清空之前的队列信息
+    queueDiv.innerHTML = '';
 
     if (queue.length === 0) {
         queueDiv.innerText = '当前没有人在排队';
@@ -199,23 +195,29 @@ function renderQueue(queue) {
         queueList.style.textAlign = 'center';  // 居中显示队列
 
         queue.forEach(user => {
-            const queueItem = document.createElement('li');
-            queueItem.innerText = user.user_name;  // 显示排队用户名
+            const userItem = document.createElement('li');
+            userItem.innerText = user.user_name;
 
-            // 仅显示用户自己能点击的“取消排队”按钮
+            // 只有排队的用户才能取消自己的排队
             if (user.user_name === userName) {
                 const cancelButton = document.createElement('button');
                 cancelButton.innerText = '取消排队';
                 cancelButton.addEventListener('click', () => {
                     cancelQueue(user.user_name);
                 });
-                queueItem.appendChild(cancelButton);
-            }
 
-            queueList.appendChild(queueItem);
+                const queueItem = document.createElement('div');
+                queueItem.appendChild(userItem);
+                queueItem.appendChild(cancelButton);
+                queueList.appendChild(queueItem);
+            } else {
+                const queueItem = document.createElement('div');
+                queueItem.appendChild(userItem);
+                queueList.appendChild(queueItem);
+            }
         });
 
-        queueDiv.appendChild(queueList);  // 添加更新后的队列信息
+        queueDiv.appendChild(queueList);
     }
 }
 
@@ -261,27 +263,6 @@ function releaseSeat() {
     })
     .catch(error => {
         console.error('释放座位时出错:', error);
-    });
-}
-
-// 加入排队函数
-function joinQueue() {
-    fetch('/api/join-queue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_name: userName })  // 发送用户名给后端
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('已加入队列');
-            loadQueue();  // 更新队列信息
-        } else {
-            alert('加入队列失败：' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('加入队列时出错:', error);
     });
 }
 
@@ -345,5 +326,26 @@ function openSeat(seat_id) {
     })
     .catch(error => {
         console.error('打开座位时出错:', error);
+    });
+}
+
+// 加入排队
+function joinQueue() {
+    fetch('/api/join-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_name: userName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('您已加入排队');
+            loadQueue();
+        } else {
+            alert('加入排队失败：' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('加入排队时出错:', error);
     });
 }
