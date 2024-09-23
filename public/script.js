@@ -123,8 +123,8 @@ function renderSeats(seats) {
             const startTime = Number(seat.startTime);
             const timeDisplay = document.createElement('p');
 
-            if (!startTime || isNaN(startTime)) {
-                timeDisplay.innerText = "占用时长: 0小时 0分钟 0秒";
+            if (!startTime || isNaN(startTime) || startTime === 0) {
+                timeDisplay.innerText = "占座中...";
             } else {
                 updateTimer(timeDisplay, startTime);
                 const interval = setInterval(() => updateTimer(timeDisplay, startTime), 1000);
@@ -187,8 +187,8 @@ function updateTimer(element, startTime) {
     const now = Date.now();
     const elapsed = now - startTime;
 
-    if (elapsed < 0 || isNaN(elapsed)) {
-        element.innerText = "占用时长: 0小时 0分钟 0秒";
+    if (elapsed <= 0 || isNaN(elapsed)) {
+        element.innerText = "占座中...";
         return;
     }
 
@@ -247,7 +247,7 @@ function occupySeat(seat_id) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(`成功占用座位：${data.seatName}`);
+            // 不再弹出成功提示，直接刷新座位信息
             loadSeats();
         } else if (data.queued) {
             alert('座位已满，您已加入队列');
@@ -271,7 +271,7 @@ function releaseSeat() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('座位已释放');
+            // 不再弹出成功提示，直接刷新座位信息
             loadSeats();
         } else {
             alert('释放座位失败: ' + data.error);
@@ -292,7 +292,7 @@ function cancelQueue(user_name) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('排队已取消');
+            // 不再弹出成功提示，直接刷新队列信息
             loadQueue();
         } else {
             alert('取消排队失败：' + data.error);
@@ -313,7 +313,7 @@ function closeSeat(seat_id) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('座位已关闭');
+            // 不再弹出成功提示，直接刷新座位信息
             loadSeats();
         } else {
             alert('关闭座位失败: ' + data.error);
@@ -334,7 +334,7 @@ function openSeat(seat_id) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('座位已打开');
+            // 不再弹出成功提示，直接刷新座位信息
             loadSeats();
         } else {
             alert('打开座位失败: ' + data.error);
@@ -355,7 +355,7 @@ function joinQueue() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('您已加入排队');
+            // 不再弹出成功提示，直接刷新队列信息
             loadQueue();
         } else {
             alert('加入排队失败：' + data.error);
